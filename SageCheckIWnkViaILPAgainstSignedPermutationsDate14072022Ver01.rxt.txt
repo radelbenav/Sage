@@ -1,0 +1,251 @@
+# File Name: SageCheckIWnkViaILPAgainstSignedPermutationsDate14072022Ver01.txt
+# Purpose: Check (Integer) Weighing matrices Via Integer Linear Programming against (direct) Signed permutations
+# Remark: After session with Radi. We are left with a question:
+#         Why No solution for R1,R2:  [0, 0, 0, 0, 0, 0, 5] [0, 0, 2, 2, 2, 2, 3]
+# Improvements: (1) Problem from remark fixed.
+#               (2) Added "sors" routine from Assaf, so to generalize the whole activity.
+# Remark: Radi on 8/5/22 noticed that solutions begin with negative values although BegWithPos should prevent it.
+#         We fix it.
+# Remark: On 12/5/22 we added two routines
+#         OurMain2: Given parameters of weighing matrix, weight and 2 divisors of order, it gives all pairs of
+#                   orthogonal rows of all types available of nsoks and filter them by the code invariany method.
+#         AddLine:  Given Nsoks and Sols gives all additions to Sols by one row taken from Nsoks
+#                   with permutations and signings and codeinvariant.
+#                   This routine is the basis for recursion to construct all Integer Weighing Matrices.
+#                   We have not run and debugged this routine yet. Next time...
+# Remark: On 15/5/22 we wroteqimproved/touched some routines:
+#         OurMain2: This is the new main. It gets the [WMweight, WMOrderDiv] of a weighing matrix and should output all inequivalent Integer weighing matrices of order=WMOrderDiv & weight=sqrt(WMweight. 
+#         FilterOrthogonalSignedPermutationsAgainstMatrix (haven't debugged yet)
+#         CodePrevRows (debugged carefully)
+# Remark: On 26052022 we debuged OurMain2 routine.
+# Remark On 30-6-22 Organizing the hp check. 
+#                   automatic base calculation for the code invariant
+#                   indexing the permutation and signs and saving the index in the configuration.
+# Remark on 3-7-22 Adding code to check for Hadamrd equivalnce for two rows for permutation AND row negation
+#                  Changes in "FilterOrthogonalSignedPermutationsByCodeInvariant" adding two code invariants for each line.
+# Remark on 14-7-22 Adding the index for each line of (NsoksIndex,PermutationIndex,SignsIndex) 
+#                    Bug for line [3, 2, 2, 2, 2, 0, 0], [[1, 16, 5], (2, -3, 2, -2, 0, 2, 0)]], 
+#                                 The SignsIndex looks incorrect - TBD in the next meeting
+def SubL(L,y):
+    return [L[i]-y for i in range(len(L))]
+
+def MulL(L,x):
+    return [L[i]*x for i in range(len(L))]
+
+def HadamardSpace(d):
+    SpaceSize = 2^d
+    L=[ZZ(n).digits(2) for n in range(SpaceSize)]
+    L1 = [x+[0]*(d-len(x)) for x in L]
+    return([[2*y-1 for y in x] for x in L1])
+
+def CartesianProductOfLists(L):
+    print("L[0],L[1]:",L[0],L[1])
+    L1 = [Set(L[i]) for i in range(len(L))]
+    print("L1:",L1)
+    L2 = cartesian_product(L1)
+    print("L2:",L2)
+    L3 = [list(e) for e in L2]
+    return(L3)
+
+def hp(L1,L2):
+    return([L1[i]*L2[i] for i in range(len(L1))])
+
+def BegWithPos(L):
+    for x in L:
+        if x<0:
+            L1 = [-y for y in L]
+            return(L1)
+    return(L)
+
+def IsBegWithPos(L):
+    for x in L:
+        if x>0:
+            return(True)
+        if x<0:
+            return(False)
+    return(False)
+
+
+def BegWithPos(L):
+    for x in L:
+        if x<0:
+            return([-y for y in L])
+        if x>0:
+            return(L)
+    return(L)
+
+def SignedPermutationsWithFirstNonZeroPositive(L):
+    P = Permutations(L).list()
+    d = len(L)
+    S = HadamardSpace(d)
+#    print("P: ",P)
+#    print(" S: ",S)
+#    S = Permutations(d*[-1,1],d).list() (Radi's alternative) 
+    SP = []
+    for p in P:
+        for s in S:
+            r = hp(p,s)
+            # print("p,s,r,BegWithPos(r):", p,s,r,BegWithPos(r))
+            if (IsBegWithPos(r)):
+            #   print("r before append:",r)
+                if not(r in SP):
+                    SP.append(r)
+    return(SP)
+
+def OrthogonalSignedPermutationsWithFirstNonZeroPositive(R1,L):
+    P = Permutations(L).list()
+    d = len(L)
+    S = HadamardSpace(d)
+    SP = []
+    ISP = []
+    for pi in range(len(P)):
+        p = P[pi]
+        for si in range(len(S)):
+            s=S[si]
+            r = hp(p,s)
+            if (IsBegWithPos(r)):
+                if dp(R1,r)==0:
+                    r=normAbove(R1,r)
+                    if not(r in SP):
+                        SP.append(r)
+                        ISP.append([pi,si])
+    return([SP,ISP])
+
+def normAbove(R1,R2):
+    for i in range(len(R1)):
+        if R1[i]==0:
+            R2[i]=abs(R2[i])
+    return R2
+
+def dp(L1,L2):
+    R = sum([L1[i]*L2[i] for i in range(len(L1))])
+#    print("dp L1,L2,R: ",L1,L2,R)
+    return(R)
+
+def FilterOrthogonalSignedPermutationsByCodeInvariant(R1,R2,R2NsoksIndex,MaxV):
+    aT2 = OrthogonalSignedPermutationsWithFirstNonZeroPositive(R1,R2)
+    aR2 = aT2[0]
+    aIR2 = aT2[1]
+    s = []
+    sd = dict()
+    if len(aR2)==0:
+        return([])
+    m = min([min(e) for e in aR2])
+    codeBase = 1+2*MaxV
+    # print("m= ",m)
+    #for R2i in aR2:
+    for r2i in range(len(aR2)):
+        R2i=aR2[r2i]
+        IR2i=[R2NsoksIndex]+aIR2[r2i]
+        R2ii=vector(R2i)
+        R2ii.set_immutable()
+        R2im = [R2i[j]-m for j in range(len(R1))]
+        M1 = [R1[i]*codeBase+R2im[i] for i in range(len(R1))]
+        M1s = sorted(M1)
+        R2imm= [(-R2i[j])-m for j in range(len(R1))]
+        M1m = [R1[i]*codeBase+R2imm[i] for i in range(len(R1))]
+        M1sm = sorted(M1m)
+        if not((M1s in s) or (M1sm in s)):
+            s.append(M1s)
+            M1si=vector(M1s)
+            M1si.set_immutable()
+            sd[M1si]=[IR2i,R2ii]
+    eR2all=[]
+    for e in s:
+        ei=vector(e)
+        ei.set_immutable()
+        eR2all.append(sd[ei])
+    #eR2all = [sd[vector(e)] for e in s]
+    return(eR2all)
+
+def CodePrevRows(PrevRows):
+    m = min([min(R) for R in PrevRows])
+    ShiftedPrevRows = [[Ri-m for Ri in R] for R in PrevRows]
+    nr = range(len(PrevRows))
+    nc = range(len(PrevRows[0]))
+    Output = [ sum([ShiftedPrevRows[i][j]*100^i for i in nr] ) for j in nc]
+    return(Output)
+
+def FilterOrthogonalSignedPermutationsAgainstMatrix(PrevRows,R):
+    aR = SignedPermutationsWithFirstNonZeroPositive(R)
+    s = []
+    m = min([min(e) for e in aR])
+    CodedPrevRows = CodePrevRows(PrevRows)
+    for Ri in aR:
+        if dpm(PrevRows,Ri) == 0:
+            Rim = [Ri[j]-m for j in range(len(R))]
+            M1 = [CodedPrevRows[i]*100+Rim[i] for i in range(len(PrevRows))]
+            M1s = sorted(M1)
+            if M1s in s:
+                a=0
+            else:
+                s.append(M1s)
+    eRall = [[e[j]%100+m for j in range(len(e))] for e in s]
+    return(eRall)
+
+def sors(n,r,maxsq):  ### Find all ways to express n=\sum_i s_i^2 as a sum of r squares, with maxsq>=s_1>=s_2>=...>=s_r.
+    #n0=RDF(n)
+    n0=n
+    if r==1:
+        s=sqrt(n0)
+        fs=floor(s)
+        if s==fs and s<=maxsq:
+            return [[s]]
+        else:
+            return false
+    else:
+        sors2=[]
+        for x in range(floor(sqrt(n0/r)),min(floor(sqrt(n0)),maxsq)+1):
+            m=n-x^2
+            #print x
+            sors1=sors(m,r-1,x)
+            if sors1:
+                sors2+=[[x]+sors1[i] for i in range(len(sors1))   ]
+           # print "sors2=",sors2
+        if len(sors2)>0:
+            return sors2
+        else:
+            return false
+
+# NsoksOrder7Sum25 = [[0,0,0,0,0,0,5],[0,0,0,0,0,3,4],[0,0,0,1,2,2,4],[0,0,2,2,2,2,3],[0,1,1,1,2,3,3],[1,1,1,1,1,2,4],[1,2,2,2,2,2,2]]
+# NsoksOrder7Sum25 = [[0,0,0,0,0,0,5]]  
+
+def OurMain2(WMWeight, WMOrderDiv):
+    MaxSquare = WMWeight^(1/2)
+    AllSoks = sors(WMWeight, WMOrderDiv, MaxSquare)
+    print("Nsoks: ",AllSoks)
+    # AllSoks = [[3, 3, 2, 1, 1, 1, 0], [0,0,2,2,2,2,3]]
+    Sols = []
+    for R1i in range(len(AllSoks)):
+        R1=AllSoks[R1i]
+        for R2i in range(R1i,len(AllSoks)):
+            R2=AllSoks[R2i]
+            print("Looping R1, R2:",R1,R2)
+            cpF = FilterOrthogonalSignedPermutationsByCodeInvariant(R1,R2,R2i,MaxSquare)
+            print ("size cpF=",len(cpF))
+            # O = [cpx for cpx in cpF if dp(R1,cpx)==0]
+            # print ("size O=",len(O))
+            if len(cpF)>0:
+                Sols = Sols+[[R1,x] for x in cpF]
+                #print(len(cpF),cpF)
+            if len(cpF)==0:
+                print("No solution for R1,R2: ",R1,R2)
+    print("# of sols =",len(Sols),[Sols[i] for i in range(min(len(Sols),3))])
+    return(Sols)
+
+
+def AddLine(Nsoks, Sols):
+    NewSols = []
+    for PrevRows in Sols:
+        for R in Nsoks:
+            cpF = FilterOrthogonalSignedPermutationsAgainstMatrix(PrevRows,R)
+            O = [cpx for cpx in cpF if dp1(PrevRows,cpx)==0]
+            if len(O)>0:
+                NewSols = NewSols+[[PrevRows,x] for x in O]
+                print(len(O),O)
+            if len(O)==0:
+                print("No solution for PrevRows,R: ",PrevRows,R)
+    print("# of sols =",len(Sols),[Sols[i] for i in range(min(len(Sols),3))])
+    return(Sols)
+
+%time OurMain2(25,7)

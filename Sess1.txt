@@ -1,0 +1,6 @@
+# enter code here
+mset=[1,1,1,1,0,0,0,0,0]
+L=Arrangements(mset,9).list()
+#print(L[1],L[2])
+#matrix(L[1])*(matrix(L[2]).transpose())
+[[matrix(L[i])*(matrix(L[j]).transpose()) for i in range(0,3)] for j in range(0,3)]
