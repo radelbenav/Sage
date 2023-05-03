@@ -181,7 +181,7 @@ def OrthogonalToAboveMatrix(AboveMatrix,FullRowList,HighestIndex,IndexSubset,Mon
         Row=FullRowList[ii]
         if AboveMatrix.nrows()==0 or Row*AboveMatrix[-1]==0:
             OrthIndexList.append(ii)
-            if AboveMatrix.nrows()>=MinimizeRowLimit:
+            if AboveMatrix.nrows()>=MinimizeRowLimit-1:
                 RowIndexList.append(ii)
                 continue
             NewMat=AboveMatrix.stack(matrix(Row))
@@ -214,8 +214,8 @@ def IterateInitials(MatList,HighestIndexList,IndexSubsetList,WeightVectors,Mon,b
     if m==n:
         return MatList
     else:
-        print("m=",m)
-        print(len(MatList))
+        #print("m=",m)
+        #print(len(MatList))
         NewMatList=[]
         NewHighestIndexList=[]
         NewIndexSubsetList=[]
@@ -240,47 +240,7 @@ def IterateInitials(MatList,HighestIndexList,IndexSubsetList,WeightVectors,Mon,b
 
 
         
-def GreedyMinimize(MM,base):
-    n=MM.ncols()
-    Sn=SymmetricGroup(n)
-    pi=Sn.random_element()
-    M=copy(MM)
-    M.permute_rows(pi)
-    M=NormalizeByColumns(M,base)
-    for i in range(n):
-        CodeMin=list(M*vector([base^(n-j) for j in range(n)]))
-        Nplus=M
-        for j in range(i+1,n):
-            TestN=copy(M)
-            TestN[i]=M[j]
-            TestN[j]=M[i]
-            T1=NormalizeByColumns(TestN,base)
-            TCode=list(T1*vector([base^(n-j) for j in range(n)]))
-            if TCode<CodeMin:
-                #print('here1')
-                CodeMin=TCode
-                Nplus=T1
-            TestN=copy(M)
-            TestN[i]=-M[j]
-            TestN[j]=M[i]
-            T2=NormalizeByColumns(TestN,base)
-            #print('T2=')
-            #print(T2)
-            TCode=list(T2*vector([base^(n-j) for j in range(n)]))
-            if TCode<CodeMin:
-                #print('here2')
-                CodeMin=TCode
-                Nplus=T2
-            #print('Nplus=')
-            #print(Nplus)
-            #print(i,j)
-        M=Nplus
-        #print(M)
-        #print()
-    return M
-            
-            
-            
+
 
 
 
